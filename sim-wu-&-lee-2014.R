@@ -122,7 +122,7 @@ run_scheme1 <- function() {
   # Define the (true) disease risk model for this simulation scheme.
   probab_dis <- function(s, m1, m2) {
     # Define the Gaussian kernel function used for this disease model.
-    kernel <- function(x) exp(-x^2 / 0.5)
+    kernel <- function(x) exp(-x^2 / 2)
     # Return the probability of disease.
     arm::invlogit(
       -3 + (2 * s) + (1.5 * m1) + (2.2 * kernel(s) * m2))
@@ -157,49 +157,28 @@ run_scheme1 <- function() {
   model3 <- glm(
     dis ~ base_score + marker2, family = binomial, data = train)
 
-  ## # Generate predicted probabilities of disease for the validation set
-  ## # using each model.
-  ## predict1 <- predict(model1, newdata = valid, type = "response")
-  ## predict2 <- predict(model2, newdata = valid, type = "response")
-  ## predict3 <- predict(model3, newdata = valid, type = "response")
-
-  ## # Calculate the predictive performance measures under each model.
-  ## auc1 <- auc(predict1, valid$dis)
-  ## auc2 <- auc(predict2, valid$dis)
-  ## auc3 <- auc(predict3, valid$dis)
-  ## gini1 <- gini(predict1, valid$dis)
-  ## gini2 <- gini(predict2, valid$dis)
-  ## gini3 <- gini(predict3, valid$dis)
-  ## pietra1 <- pietra(predict1, valid$dis)
-  ## pietra2 <- pietra(predict2, valid$dis)
-  ## pietra3 <- pietra(predict3, valid$dis)
-  ## sbrier1 <- sbrier(predict1, valid$dis)
-  ## sbrier2 <- sbrier(predict2, valid$dis)
-  ## sbrier3 <- sbrier(predict3, valid$dis)
-
   # Generate predicted probabilities of disease for the validation set
   # using each model.
-  predict1 <- predict(model1, newdata = train, type = "response")
-  predict2 <- predict(model2, newdata = train, type = "response")
-  predict3 <- predict(model3, newdata = train, type = "response")
+  predict1 <- predict(model1, newdata = valid, type = "response")
+  predict2 <- predict(model2, newdata = valid, type = "response")
+  predict3 <- predict(model3, newdata = valid, type = "response")
 
   # Calculate the predictive performance measures under each model.
-  auc1 <- auc(predict1, train$dis)
-  auc2 <- auc(predict2, train$dis)
-  auc3 <- auc(predict3, train$dis)
-  gini1 <- gini(predict1, train$dis)
-  gini2 <- gini(predict2, train$dis)
-  gini3 <- gini(predict3, train$dis)
-  pietra1 <- pietra(predict1, train$dis)
-  pietra2 <- pietra(predict2, train$dis)
-  pietra3 <- pietra(predict3, train$dis)
-  sbrier1 <- sbrier(predict1, train$dis)
-  sbrier2 <- sbrier(predict2, train$dis)
-  sbrier3 <- sbrier(predict3, train$dis)
+  auc1 <- auc(predict1, valid$dis)
+  auc2 <- auc(predict2, valid$dis)
+  auc3 <- auc(predict3, valid$dis)
+  gini1 <- gini(predict1, valid$dis)
+  gini2 <- gini(predict2, valid$dis)
+  gini3 <- gini(predict3, valid$dis)
+  pietra1 <- pietra(predict1, valid$dis)
+  pietra2 <- pietra(predict2, valid$dis)
+  pietra3 <- pietra(predict3, valid$dis)
+  sbrier1 <- sbrier(predict1, valid$dis)
+  sbrier2 <- sbrier(predict2, valid$dis)
+  sbrier3 <- sbrier(predict3, valid$dis)
 
   list(
-    ## dis = valid$dis,
-    dis = train$dis,
+    dis = valid$dis,
     predict1 = predict1, predict2 = predict2, predict3 = predict3,
     auc1 = auc1, auc2 = auc2, auc3 = auc3,
     gini1 = gini1, gini2 = gini2, gini3 = gini3,
@@ -208,14 +187,14 @@ run_scheme1 <- function() {
   )
 }
 
-system.time({
-set.seed(781649)
-results <- purrr::rerun(nsimul, run_scheme1())
-})
+## system.time({
+## set.seed(781649)
+## results <- purrr::rerun(nsimul, run_scheme1())
+## })
 
 system.time({
 set.seed(781649)
-results <- purrr::rerun(1000, run_scheme1())
+results <- purrr::rerun(100, run_scheme1())
 })
 
 
