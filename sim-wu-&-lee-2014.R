@@ -123,12 +123,12 @@ sbrier <- function(predict, outcome) {
 #' reproduced here.
 #'
 #' @param simul_results A list of simulation results produced by any
-#'   of the `run_scheme*` functions.
+#'   of the `run_scheme*` functions
 #' @return The simulation results given as input (invisibly)
 #' @examples
 #' results <- purrr::rerun(100, run_scheme1())
 #' plot_simul_results(results)
-plot_simul_results <- function(simul_results) {
+plot_simul <- function(simul_results) {
   # Define a helper function to produce each plot.
   plot_predict_probab_distrib <- function(predictions, outcomes) {
     hist(
@@ -146,7 +146,6 @@ plot_simul_results <- function(simul_results) {
       "topright", legend = c("Diseased", "Non-diseased"),
       pch = 15, col = c("gray40", "gray80")
     )
-    invisible(simul_results)
   }
 
   # Extract the outcomes and predictions from across all simulations.
@@ -159,6 +158,90 @@ plot_simul_results <- function(simul_results) {
   plot_predict_probab_distrib(p1, x)
   plot_predict_probab_distrib(p2, x)
   plot_predict_probab_distrib(p3, x)
+  invisible(simul_results)
+}
+
+
+#' Reproduce Table 1 in Wu & Lee (2014).
+#'
+#' @param simul_results A list of simulation results produced by any
+#'   of the `run_scheme*` functions
+#' @return Summary of simulation results as a `data.frame`
+#' @examples
+#' results <- purrr::rerun(100, run_scheme1())
+#' x <- summ_simul(results)
+summ_simul <- function(simul_results) {
+  # Define helper functions to print performance metrics and the
+  # absolute and relative improvements in performance metrics.
+  print_perform_meas <- function(x) {
+    format(round(x, 3), nsmall = 3)
+  }
+  print_perform_improv <- function(new, old) {
+    paste0(
+      format(round(new - old, 3), nsmall = 3), " (",
+      format(round((new - old) / old * 100, 1), nsmall = 1), "%)"
+    )
+  }
+
+  auc1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc1")))
+  auc2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc2")))
+  auc3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc3")))
+  gini1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini1")))
+  gini2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini2")))
+  gini3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini3")))
+  pietra1 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra1")))
+  pietra2 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra2")))
+  pietra3 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra3")))
+  sbrier1 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier1")))
+  sbrier2 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier2")))
+  sbrier3 <- mean(
+    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier3")))
+
+  col_text <- vector(mode = "list", length = 5)
+  col_text[[1]] <- c(
+    "", "", "Model", "B", "B + M1", "B + M2",
+    "Absolute (Relative) Improvement", "from B to B + M1",
+    "from B to B + M2"
+  )
+  col_text[[2]] <- c(
+    "Performance Measure", "AUC", "",
+    purrr::map_chr(
+      list(auc1, auc2, auc3), print_perform_meas),
+    "",
+    print_perform_improv(auc2, auc1),
+    print_perform_improv(auc3, auc1)
+  )
+  col_text[[3]] <- c(
+    "", "Gini", "",
+    purrr::map_chr(
+      list(gini1, gini2, gini3), print_perform_meas),
+    "",
+    print_perform_improv(gini2, gini1),
+    print_perform_improv(gini3, gini1)
+  )
+  col_text[[4]] <- c(
+    "", "Pietra", "",
+    purrr::map_chr(
+      list(pietra1, pietra2, pietra3), print_perform_meas),
+    "",
+    print_perform_improv(pietra2, pietra1),
+    print_perform_improv(pietra3, pietra1)
+  )
+  col_text[[5]] <- c(
+    "", "Scaled Brier", "",
+    purrr::map_chr(
+      list(sbrier1, sbrier2, sbrier3), print_perform_meas),
+    "",
+    print_perform_improv(sbrier2, sbrier1),
+    print_perform_improv(sbrier3, sbrier1)
+  )
+  table1 <- do.call(cbind, col_text)
+  as.data.frame(table1)
 }
 
 
@@ -204,7 +287,7 @@ run_scheme1 <- function() {
   model2 <- glm(
     dis ~ base_score + marker1, family = binomial, data = train)
   model3 <- glm(
-    dis ~ base_score + marker1 + marker2, family = binomial, data = train)
+    dis ~ base_score + marker2, family = binomial, data = train)
 
   # Generate predicted probabilities of disease for the validation set
   # using each model.
@@ -244,60 +327,12 @@ run_scheme1 <- function() {
 set.seed(781649)
 results <- purrr::rerun(100, run_scheme1())
 
-
-# plot_predict_probab
-
-pp <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict3")))
-oo <- unlist(purrr::map(results, ~ purrr::pluck(.x, "dis")))
-
-hist(pp[oo == 0], breaks = 20, freq = FALSE, col = "gray80")
-hist(pp[oo == 1], breaks = 20, freq = FALSE, col = "gray30", add = TRUE)
-abline(v = mean(oo))
-abline(v = tapply(pp, oo, mean), lty = "dashed")
-legend(
-  "topright", legend = c("Diseased", "Non-diseased"), pch = 15, col = c("gray40", "gray80")
+plot_simul(results)
+x <- summ_simul(results)
+write.table(
+  x, "./output/table1.csv", sep = ",",
+  row.names = FALSE, col.names = FALSE
 )
-
-
-
-plot_simul_results(results)
-
-
-# analyze_simul
-
-results1 <- results
-
-auc1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc1")))
-auc2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc2")))
-auc3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc3")))
-auc1
-auc2
-auc3
-
-gini1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini1")))
-gini2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini2")))
-gini3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini3")))
-gini1
-gini2
-gini3
-
-pietra1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra1")))
-pietra2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra2")))
-pietra3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra3")))
-pietra1
-pietra2
-pietra3
-
-sbrier1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier1")))
-sbrier2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier2")))
-sbrier3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier3")))
-sbrier1
-sbrier2
-sbrier3
-
-d1 <- results[[1]]
-mean(d1$dis); mean(d1$predict1); mean(d1$predict2); mean(d1$predict3)
-
 
 
 x <- seq(-3, 3, length.out = 1000)
