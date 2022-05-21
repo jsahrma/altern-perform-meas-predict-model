@@ -21,8 +21,8 @@ library(purrr)
 
 # Constant definitions -----------------------------------------------
 
-nsimul <- 10000
-npt <- 1000
+nsimul <- 10000                    # number of simulations
+npt <- 1000                        # number of subjects per simulation
 
 
 # Function definitions -----------------------------------------------
@@ -122,7 +122,7 @@ run_scheme1 <- function() {
   # Define the (true) disease risk model for this simulation scheme.
   probab_dis <- function(s, m1, m2) {
     # Define the Gaussian kernel function used for this disease model.
-    kernel <- function(x) exp(-x^2 / 2)
+    kernel <- function(x) exp(-x^2 / 0.5)
     # Return the probability of disease.
     arm::invlogit(
       -3 + (2 * s) + (1.5 * m1) + (2.2 * kernel(s) * m2))
@@ -155,7 +155,7 @@ run_scheme1 <- function() {
   model2 <- glm(
     dis ~ base_score + marker1, family = binomial, data = train)
   model3 <- glm(
-    dis ~ base_score + marker2, family = binomial, data = train)
+    dis ~ base_score + marker1 + marker2, family = binomial, data = train)
 
   # Generate predicted probabilities of disease for the validation set
   # using each model.
@@ -200,7 +200,7 @@ results <- purrr::rerun(100, run_scheme1())
 
 # plot_predict_probab
 
-pp <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict1")))
+pp <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict3")))
 oo <- unlist(purrr::map(results, ~ purrr::pluck(.x, "dis")))
 
 hist(pp[oo == 0], breaks = 20, freq = FALSE, col = "gray80")
@@ -208,7 +208,7 @@ hist(pp[oo == 1], breaks = 20, freq = FALSE, col = "gray40", add = TRUE)
 abline(v = mean(oo))
 abline(v = tapply(pp, oo, mean), lty = "dashed")
 legend(
-  "topright", legend = c("Diseased", "Non-diseased"), pch = 17, col = c("gray40", "gray80")
+  "topright", legend = c("Diseased", "Non-diseased"), pch = 15, col = c("gray40", "gray80")
 )
 
 
