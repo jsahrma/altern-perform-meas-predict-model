@@ -335,96 +335,6 @@ write.table(
 )
 
 
-x <- seq(-3, 3, length.out = 1000)
-y1 <- exp(2.2 * exp(-x^2 / 0.5))
-y2 <- exp(2.2 * exp(-x^2 / 2))
-
-plot(y1 ~ x, type = "l")
-lines(y2 ~ x, col = "blue")
-
-
-
-
-# Define the (true) disease risk model for this simulation scheme.
-probab_dis <- function(s, m1, m2) {
-  # Define the Gaussian kernel function used for this disease model.
-  kernel <- function(x) exp(-x^2 / 0.5)
-  # Return the probability of disease.
-  ## arm::invlogit(
-  plogis(
-    -3 + (2 * s) + (1.5 * m1) + (2.2 * kernel(s) * m2))
-}
-
-# Simulate a data set containing the covariates and disease state.
-dat <- dplyr::tibble(base_score = rnorm(npt)) %>%
-  dplyr::mutate(
-    marker1_85 = sample(
-      0:1, npt, replace = TRUE, prob = c(.15, .85)),
-    marker1_75 = sample(
-      0:1, npt, replace = TRUE, prob = c(.25, .75)),
-    marker1 = ifelse(base_score > 0, marker1_85, marker1_75),
-    marker2_85 = sample(
-      0:1, npt, replace = TRUE, prob = c(.15, .85)),
-    marker2_75 = sample(
-      0:1, npt, replace = TRUE, prob = c(.25, .75)),
-    marker2 = ifelse(base_score > 0, marker2_85, marker2_75),
-    dis = ifelse(
-      runif(npt) < probab_dis(base_score, marker1, marker2), 1L, 0L)
-  ) %>%
-  dplyr::select(-dplyr::matches("(_75|_85)$"))
-
-# Split into training and validation sets.
-train <- dat[1:(npt / 2), ]
-valid <- dat[((npt / 2) + 1):npt, ]
-
-# Fit each model.
-model1 <- glm(dis ~ base_score, family = binomial, data = train)
-model2 <- glm(
-  dis ~ base_score + marker1, family = binomial, data = train)
-model3 <- glm(
-  dis ~ base_score + marker2, family = binomial, data = train)
-
-# Generate predicted probabilities of disease for the validation set
-# using each model.
-predict1 <- predict(model1, newdata = valid, type = "response")
-predict2 <- predict(model2, newdata = valid, type = "response")
-predict3 <- predict(model3, newdata = valid, type = "response")
-
-# Calculate the predictive performance measures under each model.
-auc1 <- auc(predict1, valid$dis)
-auc2 <- auc(predict2, valid$dis)
-auc3 <- auc(predict3, valid$dis)
-gini1 <- gini(predict1, valid$dis)
-gini2 <- gini(predict2, valid$dis)
-gini3 <- gini(predict3, valid$dis)
-pietra1 <- pietra(predict1, valid$dis)
-pietra2 <- pietra(predict2, valid$dis)
-pietra3 <- pietra(predict3, valid$dis)
-sbrier1 <- sbrier(predict1, valid$dis)
-sbrier2 <- sbrier(predict2, valid$dis)
-sbrier3 <- sbrier(predict3, valid$dis)
-
-auc1; auc2; auc3
-
-list(
-  dis = valid$dis,
-  predict1 = predict1, predict2 = predict2, predict3 = predict3,
-  auc1 = auc1, auc2 = auc2, auc3 = auc3,
-  gini1 = gini1, gini2 = gini2, gini3 = gini3,
-  pietra1 = pietra1, pietra2 = pietra2, pietra3 = pietra3,
-  sbrier1 = sbrier1, sbrier2 = sbrier2, sbrier3 = sbrier3
-)
-
-
-train2 <- dat[1:500,]
-valid2 <- dat[501:1000,]
-model4 <- glm(dis ~ base_score + term3, data = train2, family = binomial)
-pred4 <- predict(model4, newdata = valid2, type = "response")
-
-auc(pred4, valid2$dis)
-tapply(pred4, valid2$dis, mean)
-
-
 # Scheme 2 ------------------------
 
 run_scheme2 <- function() {
@@ -548,3 +458,130 @@ sbrier3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier3")))
 sbrier1
 sbrier2
 sbrier3
+
+s <- rnorm(npt)
+
+set.seed(123)
+m1_85 <- sample(0:1, npt, replace = TRUE, prob = c(.15, .85))
+m1_50 <- sample(0:1, npt, replace = TRUE, prob = c(.5, .5))
+m1x <- ifelse(s > 0, m1_85, m1_50)
+
+set.seed(123)
+m1y <- ifelse(
+  s > 0,
+  sample(0:1, npt, replace = TRUE, prob = c(.15, .85)),
+  sample(0:1, npt, replace = TRUE, prob = c(.5, .5))
+)
+
+all(m1x == m1y)
+
+# Scheme 3 ------------------------
+
+run_scheme3 <- function() {
+  # Define the (true) disease risk model for this simulation scheme.
+  probab_dis <- function(s, m5, m6, m7, m8, m9, m10) {
+    # Define the Gaussian kernel function used for this disease model.
+    kernel <- function(x) exp(-x^2 / 0.5)
+    # Return the probability of disease.
+    arm::invlogit(
+      -3 + (2 * s) + (0.7 * (m5 + m6 + m7)) +
+      (0.75 * kernel(s) * (m8 + m9 + m10))
+    )
+  }
+
+  # Simulate a data set containing the covariates and disease state.
+  dat <- dplyr::tibble(base_score = rnorm(npt)) %>%
+    dplyr::mutate(
+      marker5 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      marker6 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      marker7 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      marker8 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      marker9 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      marker10 = ifelse(
+        base_score > 0,
+        0:1, npt, replace = TRUE, prob = c(.15, .85),
+        0:1, npt, replace = TRUE, prob = c(.25, .75)
+      )
+      dis = ifelse(
+        runif(npt) < probab_dis(
+          base_score, marker5, marker6, marker7, marker8, marker9,
+          marker10
+        ),
+        1L, 0L)
+    )
+
+  # Split into training and validation sets.
+  train <- dat[1:(npt / 2), ]
+  valid <- dat[((npt / 2) + 1):npt, ]
+
+  # Fit each model.
+  model1 <- glm(dis ~ base_score, family = binomial, data = train)
+  model2 <- glm(
+    dis ~ base_score + marker1, family = binomial, data = train)
+  model3 <- glm(
+    dis ~ base_score + marker2, family = binomial, data = train)
+
+  # Generate predicted probabilities of disease for the validation set
+  # using each model.
+  predict1 <- predict(model1, newdata = valid, type = "response")
+  predict2 <- predict(model2, newdata = valid, type = "response")
+  predict3 <- predict(model3, newdata = valid, type = "response")
+
+  # Calculate the predictive performance measures under each model.
+  auc1 <- auc(predict1, valid$dis)
+  auc2 <- auc(predict2, valid$dis)
+  auc3 <- auc(predict3, valid$dis)
+  gini1 <- gini(predict1, valid$dis)
+  gini2 <- gini(predict2, valid$dis)
+  gini3 <- gini(predict3, valid$dis)
+  pietra1 <- pietra(predict1, valid$dis)
+  pietra2 <- pietra(predict2, valid$dis)
+  pietra3 <- pietra(predict3, valid$dis)
+  sbrier1 <- sbrier(predict1, valid$dis)
+  sbrier2 <- sbrier(predict2, valid$dis)
+  sbrier3 <- sbrier(predict3, valid$dis)
+
+  list(
+    dis = valid$dis,
+    predict1 = predict1, predict2 = predict2, predict3 = predict3,
+    auc1 = auc1, auc2 = auc2, auc3 = auc3,
+    gini1 = gini1, gini2 = gini2, gini3 = gini3,
+    pietra1 = pietra1, pietra2 = pietra2, pietra3 = pietra3,
+    sbrier1 = sbrier1, sbrier2 = sbrier2, sbrier3 = sbrier3
+  )
+}
+
+## system.time({
+## set.seed(781649)
+## results <- purrr::rerun(nsimul, run_scheme1())
+## })
+
+set.seed(781649)
+results <- purrr::rerun(100, run_scheme1())
+
+plot_simul(results)
+x <- summ_simul(results)
+write.table(
+  x, "./output/table1.csv", sep = ",",
+  row.names = FALSE, col.names = FALSE
+)
