@@ -9,7 +9,7 @@
 # Prediction Models. PLoS ONE 9(3): e91249.
 #
 # John Sahrmann
-# 20220513
+# 20220521
 
 
 # Setup --------------------------------------------------------------
@@ -59,6 +59,7 @@ auc <- function(predict, outcome) {
   sum_scores / (n1 * (n - n1))
 }
 
+
 #' Compute the Gini index.
 #'
 #' @param predict Vector of predicted probabilities
@@ -80,6 +81,7 @@ gini <- function(predict, outcome) {
   numer / denom
 }
 
+
 #' Compute the Pietra index.
 #'
 #' @param predict Vector of predicted probabilities
@@ -96,6 +98,7 @@ pietra <- function(predict, outcome) {
   numer / denom
 }
 
+
 #' Compute the scaled Brier score.
 #'
 #' @param predict Vector of predicted probabilities
@@ -110,6 +113,52 @@ sbrier <- function(predict, outcome) {
   numer <- sum((predict - p_bar)^2)
   denom <- n * p_bar * (1 - p_bar)
   numer / denom
+}
+
+
+#' Reproduce Figure 3 in Wu & Lee (2014).
+#'
+#' Note that the histograms from the two distributions appear to be
+#' stacked in the text, which doesn't seem ideal. That will not be
+#' reproduced here.
+#'
+#' @param simul_results A list of simulation results produced by any
+#'   of the `run_scheme*` functions.
+#' @return The simulation results given as input (invisibly)
+#' @examples
+#' results <- purrr::rerun(100, run_scheme1())
+#' plot_simul_results(results)
+plot_simul_results <- function(simul_results) {
+  # Define a helper function to produce each plot.
+  plot_predict_probab_distrib <- function(predictions, outcomes) {
+    hist(
+      predictions[outcomes == 0], breaks = 20, freq = FALSE,
+      col = "gray80", main = "", xlab = "Predicted Probability",
+      ylab = "Density"
+    )
+    hist(
+      predictions[outcomes == 1], breaks = 20, freq = FALSE,
+      col = "gray30", add = TRUE
+    )
+    abline(v = mean(outcomes))
+    abline(v = tapply(predictions, outcomes, mean), lty = "dashed")
+    legend(
+      "topright", legend = c("Diseased", "Non-diseased"),
+      pch = 15, col = c("gray40", "gray80")
+    )
+    invisible(simul_results)
+  }
+
+  # Extract the outcomes and predictions from across all simulations.
+  x <- unlist(purrr::map(simul_results, ~ purrr::pluck(.x, "dis")))
+  p1 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict1")))
+  p2 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict2")))
+  p3 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict3")))
+  
+  par(mfrow = c(3, 1))
+  plot_predict_probab_distrib(p1, x)
+  plot_predict_probab_distrib(p2, x)
+  plot_predict_probab_distrib(p3, x)
 }
 
 
@@ -192,10 +241,8 @@ run_scheme1 <- function() {
 ## results <- purrr::rerun(nsimul, run_scheme1())
 ## })
 
-system.time({
 set.seed(781649)
 results <- purrr::rerun(100, run_scheme1())
-})
 
 
 # plot_predict_probab
@@ -204,12 +251,16 @@ pp <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict3")))
 oo <- unlist(purrr::map(results, ~ purrr::pluck(.x, "dis")))
 
 hist(pp[oo == 0], breaks = 20, freq = FALSE, col = "gray80")
-hist(pp[oo == 1], breaks = 20, freq = FALSE, col = "gray40", add = TRUE)
+hist(pp[oo == 1], breaks = 20, freq = FALSE, col = "gray30", add = TRUE)
 abline(v = mean(oo))
 abline(v = tapply(pp, oo, mean), lty = "dashed")
 legend(
   "topright", legend = c("Diseased", "Non-diseased"), pch = 15, col = c("gray40", "gray80")
 )
+
+
+
+plot_simul_results(results)
 
 
 # analyze_simul
