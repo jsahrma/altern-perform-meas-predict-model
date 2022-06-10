@@ -9,7 +9,7 @@
 # Prediction Models. PLoS ONE 9(3): e91249.
 #
 # John Sahrmann
-# 20220521
+# 20220610
 
 
 # Setup --------------------------------------------------------------
@@ -21,8 +21,8 @@ library(purrr)
 
 # Constant definitions -----------------------------------------------
 
-nsimul <- 10000                    # number of simulations
-npt <- 1000                        # number of subjects per simulation
+n_simul <- 10000                    # number of simulations
+n_pt <- 1000                        # number of subjects per simulation
 
 
 # Function definitions -----------------------------------------------
@@ -116,7 +116,7 @@ sbrier <- function(predict, outcome) {
 }
 
 
-#' Reproduce Figure 3 in Wu & Lee (2014).
+#' Reproduce Figure 3 in Wu & Lee (2014, p 3).
 #'
 #' Note that the histograms from the two distributions appear to be
 #' stacked in the text, which doesn't seem ideal. That will not be
@@ -127,7 +127,7 @@ sbrier <- function(predict, outcome) {
 #' @return The simulation results given as input (invisibly)
 #' @examples
 #' results <- purrr::rerun(100, run_scheme1())
-#' plot_simul_results(results)
+#' plot_simul(results)
 plot_simul <- function(simul_results) {
   # Define a helper function to produce each plot.
   plot_predict_probab_distrib <- function(predictions, outcomes) {
@@ -162,7 +162,7 @@ plot_simul <- function(simul_results) {
 }
 
 
-#' Reproduce Table 1 in Wu & Lee (2014).
+#' Reproduce Table 1 in Wu & Lee (2014, p 5).
 #'
 #' @param simul_results A list of simulation results produced by any
 #'   of the `run_scheme*` functions
@@ -261,26 +261,26 @@ run_scheme1 <- function() {
   }
 
   # Simulate a data set containing the covariates and disease state.
-  dat <- dplyr::tibble(base_score = rnorm(npt)) %>%
+  dat <- dplyr::tibble(base_score = rnorm(n_pt)) %>%
     dplyr::mutate(
       marker1_85 = sample(
-        0:1, npt, replace = TRUE, prob = c(.15, .85)),
+        0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
       marker1_75 = sample(
-        0:1, npt, replace = TRUE, prob = c(.25, .75)),
+        0:1, n_pt, replace = TRUE, prob = c(.25, .75)),
       marker1 = ifelse(base_score > 0, marker1_85, marker1_75),
       marker2_85 = sample(
-        0:1, npt, replace = TRUE, prob = c(.15, .85)),
+        0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
       marker2_75 = sample(
-        0:1, npt, replace = TRUE, prob = c(.25, .75)),
+        0:1, n_pt, replace = TRUE, prob = c(.25, .75)),
       marker2 = ifelse(base_score > 0, marker2_85, marker2_75),
       dis = ifelse(
-        runif(npt) < probab_dis(base_score, marker1, marker2), 1L, 0L)
+        runif(n_pt) < probab_dis(base_score, marker1, marker2), 1L, 0L)
     ) %>%
     dplyr::select(-dplyr::matches("(_75|_85)$"))
 
   # Split into training and validation sets.
-  train <- dat[1:(npt / 2), ]
-  valid <- dat[((npt / 2) + 1):npt, ]
+  train <- dat[1:(n_pt / 2), ]
+  valid <- dat[((n_pt / 2) + 1):n_pt, ]
 
   # Fit each model.
   model1 <- glm(dis ~ base_score, family = binomial, data = train)
@@ -319,20 +319,24 @@ run_scheme1 <- function() {
   )
 }
 
-## system.time({
-## set.seed(781649)
-## results <- purrr::rerun(nsimul, run_scheme1())
-## })
-
+system.time({
 set.seed(781649)
-results <- purrr::rerun(100, run_scheme1())
+results_scheme1 <- purrr::rerun(n_simul, run_scheme1())
+})
+save(results_scheme1, file = "../data/scheme1_results.Rdata")
 
+png(
+  "../output/scheme1_predict_probab_distrib.png",
+  width = 800, height = 1400, res = 200)
 plot_simul(results)
-x <- summ_simul(results)
+dev.off()
+
+x <- summ_simul(results_scheme1)
 write.table(
   x, "./output/table1.csv", sep = ",",
   row.names = FALSE, col.names = FALSE
 )
+
 
 
 # Scheme 2 ------------------------
@@ -348,22 +352,22 @@ run_scheme2 <- function() {
   }
 
   # Simulate a data set containing the covariates and disease state.
-  dat <- dplyr::tibble(base_score = rnorm(npt)) %>%
+  dat <- dplyr::tibble(base_score = rnorm(n_pt)) %>%
     dplyr::mutate(
-      marker3_s_gt0 = rnorm(npt, 3.65, 1),
-      marker3_s_le0 = rnorm(npt, 3.55, 1),
+      marker3_s_gt0 = rnorm(n_pt, 3.65, 1),
+      marker3_s_le0 = rnorm(n_pt, 3.55, 1),
       marker3 = ifelse(base_score > 0, marker3_s_gt0, marker3_s_le0),
-      marker4_s_gt0 = rnorm(npt, 0.05, 1),
-      marker4_s_le0 = rnorm(npt, -0.05, 1),
+      marker4_s_gt0 = rnorm(n_pt, 0.05, 1),
+      marker4_s_le0 = rnorm(n_pt, -0.05, 1),
       marker4 = ifelse(base_score > 0, marker4_s_gt0, marker4_s_le0),
       dis = ifelse(
-        runif(npt) < probab_dis(base_score, marker3, marker4), 1L, 0L)
+        runif(n_pt) < probab_dis(base_score, marker3, marker4), 1L, 0L)
     ) %>%
     dplyr::select(-dplyr::matches("(gt0|le0)$"))
 
   # Split into training and validation sets.
-  train <- dat[1:(npt / 2), ]
-  valid <- dat[((npt / 2) + 1):npt, ]
+  train <- dat[1:(n_pt / 2), ]
+  valid <- dat[((n_pt / 2) + 1):n_pt, ]
 
   # Fit each model.
   model1 <- glm(dis ~ base_score, family = binomial, data = train)
@@ -402,78 +406,24 @@ run_scheme2 <- function() {
   )
 }
 
-## system.time({
-## set.seed(639320)
-## results <- purrr::rerun(nsimul, run_scheme2())
-## })
-
 system.time({
 set.seed(639320)
-results <- purrr::rerun(1000, run_scheme2())
+results_scheme2 <- purrr::rerun(n_simul, run_scheme2())
 })
+save(results_scheme2, file = "../data/scheme2_results.Rdata")
 
+png(
+  "../output/scheme2_predict_probab_distrib.png",
+  width = 800, height = 1400, res = 200)
+plot_simul(results)
+dev.off()
 
-# plot_predict_probab
-
-pp <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict1")))
-oo <- unlist(purrr::map(results, ~ purrr::pluck(.x, "dis")))
-
-hist(pp[oo == 0], breaks = 20, freq = FALSE, col = "gray80")
-hist(pp[oo == 1], breaks = 20, freq = FALSE, col = "gray40", add = TRUE)
-abline(v = mean(oo))
-abline(v = tapply(pp, oo, mean), lty = "dashed")
-legend(
-  "topright", legend = c("Diseased", "Non-diseased"), pch = 15, col = c("gray40", "gray80")
+x <- summ_simul(results_scheme2)
+write.table(
+  x, "./output/table_s1.csv", sep = ",",
+  row.names = FALSE, col.names = FALSE
 )
 
-
-# analyze_simul
-
-## results1 <- results
-
-auc1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc1")))
-auc2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc2")))
-auc3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc3")))
-auc1
-auc2
-auc3
-
-gini1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini1")))
-gini2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini2")))
-gini3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini3")))
-gini1
-gini2
-gini3
-
-pietra1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra1")))
-pietra2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra2")))
-pietra3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra3")))
-pietra1
-pietra2
-pietra3
-
-sbrier1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier1")))
-sbrier2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier2")))
-sbrier3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier3")))
-sbrier1
-sbrier2
-sbrier3
-
-s <- rnorm(npt)
-
-set.seed(123)
-m1_85 <- sample(0:1, npt, replace = TRUE, prob = c(.15, .85))
-m1_50 <- sample(0:1, npt, replace = TRUE, prob = c(.5, .5))
-m1x <- ifelse(s > 0, m1_85, m1_50)
-
-set.seed(123)
-m1y <- ifelse(
-  s > 0,
-  sample(0:1, npt, replace = TRUE, prob = c(.15, .85)),
-  sample(0:1, npt, replace = TRUE, prob = c(.5, .5))
-)
-
-all(m1x == m1y)
 
 # Scheme 3 ------------------------
 
@@ -490,40 +440,40 @@ run_scheme3 <- function() {
   }
 
   # Simulate a data set containing the covariates and disease state.
-  dat <- dplyr::tibble(base_score = rnorm(npt)) %>%
+  dat <- dplyr::tibble(base_score = rnorm(n_pt)) %>%
     dplyr::mutate(
       marker5 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       marker6 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       marker7 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       marker8 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       marker9 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       marker10 = ifelse(
         base_score > 0,
-        0:1, npt, replace = TRUE, prob = c(.15, .85),
-        0:1, npt, replace = TRUE, prob = c(.25, .75)
-      )
+        sample(0:1, n_pt, replace = TRUE, prob = c(.15, .85)),
+        sample(0:1, n_pt, replace = TRUE, prob = c(.25, .75))
+      ),
       dis = ifelse(
-        runif(npt) < probab_dis(
+        runif(n_pt) < probab_dis(
           base_score, marker5, marker6, marker7, marker8, marker9,
           marker10
         ),
@@ -531,15 +481,17 @@ run_scheme3 <- function() {
     )
 
   # Split into training and validation sets.
-  train <- dat[1:(npt / 2), ]
-  valid <- dat[((npt / 2) + 1):npt, ]
+  train <- dat[1:(n_pt / 2), ]
+  valid <- dat[((n_pt / 2) + 1):n_pt, ]
 
   # Fit each model.
   model1 <- glm(dis ~ base_score, family = binomial, data = train)
   model2 <- glm(
-    dis ~ base_score + marker1, family = binomial, data = train)
+    dis ~ base_score + marker5 + marker6 + marker7,
+    family = binomial, data = train)
   model3 <- glm(
-    dis ~ base_score + marker2, family = binomial, data = train)
+    dis ~ base_score + marker8 + marker9 + marker10,
+    family = binomial, data = train)
 
   # Generate predicted probabilities of disease for the validation set
   # using each model.
@@ -571,17 +523,20 @@ run_scheme3 <- function() {
   )
 }
 
-## system.time({
-## set.seed(781649)
-## results <- purrr::rerun(nsimul, run_scheme1())
-## })
+system.time({
+set.seed(866289)
+results_scheme3 <- purrr::rerun(n_simul, run_scheme3())
+})
+save(results_scheme3, file = "../data/scheme3_results.Rdata")
 
-set.seed(781649)
-results <- purrr::rerun(100, run_scheme1())
-
+png(
+  "../output/scheme3_predict_probab_distrib.png",
+  width = 800, height = 1400, res = 200)
 plot_simul(results)
-x <- summ_simul(results)
+dev.off()
+
+x <- summ_simul(results_scheme3)
 write.table(
-  x, "./output/table1.csv", sep = ",",
+  x, "./output/table_s2.csv", sep = ",",
   row.names = FALSE, col.names = FALSE
 )
