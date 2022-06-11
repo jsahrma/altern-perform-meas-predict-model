@@ -149,10 +149,14 @@ plot_simul <- function(simul_results) {
   }
 
   # Extract the outcomes and predictions from across all simulations.
-  x <- unlist(purrr::map(simul_results, ~ purrr::pluck(.x, "dis")))
-  p1 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict1")))
-  p2 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict2")))
-  p3 <- unlist(purrr::map(results, ~ purrr::pluck(.x, "predict3")))
+  x <- unlist(
+    purrr::map(simul_results, ~ purrr::pluck(.x, "dis")))
+  p1 <- unlist(
+    purrr::map(simul_results, ~ purrr::pluck(.x, "predict1")))
+  p2 <- unlist(
+    purrr::map(simul_results, ~ purrr::pluck(.x, "predict2")))
+  p3 <- unlist(
+    purrr::map(simul_results, ~ purrr::pluck(.x, "predict3")))
   
   par(mfrow = c(3, 1))
   plot_predict_probab_distrib(p1, x)
@@ -183,24 +187,30 @@ summ_simul <- function(simul_results) {
     )
   }
 
-  auc1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc1")))
-  auc2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc2")))
-  auc3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "auc3")))
-  gini1 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini1")))
-  gini2 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini2")))
-  gini3 <- mean(purrr::map_dbl(results, ~ purrr::pluck(.x, "gini3")))
+  auc1 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "auc1")))
+  auc2 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "auc2")))
+  auc3 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "auc3")))
+  gini1 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "gini1")))
+  gini2 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "gini2")))
+  gini3 <- mean(
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "gini3")))
   pietra1 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra1")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "pietra1")))
   pietra2 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra2")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "pietra2")))
   pietra3 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "pietra3")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "pietra3")))
   sbrier1 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier1")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "sbrier1")))
   sbrier2 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier2")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "sbrier2")))
   sbrier3 <- mean(
-    purrr::map_dbl(results, ~ purrr::pluck(.x, "sbrier3")))
+    purrr::map_dbl(simul_results, ~ purrr::pluck(.x, "sbrier3")))
 
   col_text <- vector(mode = "list", length = 5)
   col_text[[1]] <- c(
@@ -328,12 +338,12 @@ save(results_scheme1, file = "../data/scheme1_results.Rdata")
 png(
   "../output/scheme1_predict_probab_distrib.png",
   width = 800, height = 1400, res = 200)
-plot_simul(results)
+plot_simul(results_scheme1)
 dev.off()
 
 x <- summ_simul(results_scheme1)
 write.table(
-  x, "./output/table1.csv", sep = ",",
+  x, "../output/table1.csv", sep = ",",
   row.names = FALSE, col.names = FALSE
 )
 
@@ -415,12 +425,12 @@ save(results_scheme2, file = "../data/scheme2_results.Rdata")
 png(
   "../output/scheme2_predict_probab_distrib.png",
   width = 800, height = 1400, res = 200)
-plot_simul(results)
+plot_simul(results_scheme2)
 dev.off()
 
 x <- summ_simul(results_scheme2)
 write.table(
-  x, "./output/table_s1.csv", sep = ",",
+  x, "../output/table_s1.csv", sep = ",",
   row.names = FALSE, col.names = FALSE
 )
 
@@ -532,11 +542,11 @@ save(results_scheme3, file = "../data/scheme3_results.Rdata")
 png(
   "../output/scheme3_predict_probab_distrib.png",
   width = 800, height = 1400, res = 200)
-plot_simul(results)
+plot_simul(results_scheme3)
 dev.off()
 
 x <- summ_simul(results_scheme3)
 write.table(
-  x, "./output/table_s2.csv", sep = ",",
+  x, "../output/table_s2.csv", sep = ",",
   row.names = FALSE, col.names = FALSE
 )
